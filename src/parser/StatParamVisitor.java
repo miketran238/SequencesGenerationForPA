@@ -626,13 +626,19 @@ public class StatParamVisitor extends ASTVisitor {
 					return false;
 			}
 		}
+		String typeResult=resolveType(tb);
+		
+		if(typeResult.equals("")){
+			return false;
+		}
 		this.fullTokens.append(" ");
 		// this.partialTokens.append(" ");
 		if (node.getExpression() != null) {
 			node.getExpression().accept(this);
 		} 
 		String name = "." + node.getName().getIdentifier() + "()";
-		name = getQualifiedName(tb) + name;
+		
+		name = resolveType(tb) + name;
 		this.fullTokens.append(" " + name + " ");
 		
 		for (int i = 0; i < node.arguments().size(); i++){
@@ -984,6 +990,9 @@ public class StatParamVisitor extends ASTVisitor {
 
 	private String resolveType(ITypeBinding tb) {
 		String result = "";
+		if(tb==null){
+			return "";
+		}
 		if (tb.isArray())
 			return getQualifiedName(tb.getComponentType().getTypeDeclaration())
 					+ getDimensions(tb.getDimensions());
@@ -996,6 +1005,7 @@ public class StatParamVisitor extends ASTVisitor {
 
 	// need to override
 	private String getQualifiedName(ITypeBinding tb) {
+
 		if (tb.isArray())
 			return getQualifiedName(tb.getComponentType().getTypeDeclaration())
 					+ getDimensions(tb.getDimensions());
