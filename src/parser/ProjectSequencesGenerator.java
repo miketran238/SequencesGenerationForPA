@@ -28,7 +28,7 @@ public class ProjectSequencesGenerator {
 	private static final boolean PARSE_INDIVIDUAL_SRC = false, SCAN_FILES_FRIST = false;
 	
 	private String inPath, outPath;
-	private boolean testing = false;
+	private boolean testing = true;
 	private PrintStream stLocations, stSourceSequences, stTargetSequences, stLog;
 	private HashSet<String> badFiles = new HashSet<>();
 	
@@ -53,7 +53,6 @@ public class ProjectSequencesGenerator {
 		new File(outPath).mkdirs();
 		try {
 			stLocations = new PrintStream(new FileOutputStream(outPath + "/locations.txt"));
-			//stSourceSequences = new PrintStream(new FileOutputStream(outPath + "/source.txt"));
 			stTargetSequences = new PrintStream(new FileOutputStream(outPath + "/target.txt"));
 			stLog = new PrintStream(new FileOutputStream(outPath + "/log.txt"));
 		} catch (FileNotFoundException e) {
@@ -76,7 +75,7 @@ public class ProjectSequencesGenerator {
 			parser.setResolveBindings(true);
 			parser.setBindingsRecovery(false);
 			
-			StatTypeFileASTRequestor r = new StatTypeFileASTRequestor(keepUnresolvables, lib);
+			PA_FileASTRequestor r = new PA_FileASTRequestor(keepUnresolvables, lib);
 			try {
 				parser.createASTs(sourcePaths, null, new String[0], r, null);
 			} catch (Throwable t) {
@@ -91,12 +90,12 @@ public class ProjectSequencesGenerator {
 		return numOfSequences;
 	}
 	
-	private class StatTypeFileASTRequestor extends FileASTRequestor {
+	private class PA_FileASTRequestor extends FileASTRequestor {
 		int numOfSequences = 0;
 		private boolean keepUnresolvables;
 		private String lib;
 		
-		public StatTypeFileASTRequestor(boolean keepUnresolvables, String lib) {
+		public PA_FileASTRequestor(boolean keepUnresolvables, String lib) {
 			this.keepUnresolvables = keepUnresolvables;
 			this.lib = lib;
 		}
@@ -199,31 +198,17 @@ public class ProjectSequencesGenerator {
 		int numOfSequences = 0;
 		String name = outer.isEmpty() ? td.getName().getIdentifier() : outer + "." + td.getName().getIdentifier();
 		String className = td.getName().getIdentifier(), superClassName = null;
-//		if (td.getSuperclassType() != null)
-//			superClassName = SequenceGenerator.getUnresolvedType(td.getSuperclassType());
 		for (MethodDeclaration method : td.getMethods()) {
 			stLog.println(path + "\t" + name + "\t" + method.getName().getIdentifier() + "\t" + getParameters(method));
-			StatParamVisitor sg = new StatParamVisitor(className, superClassName);
+			
+			PA_Visitor sg = new PA_Visitor(className, superClassName);
 			method.accept(sg);
 			int numofExpressions = sg.getNumOfExpressions(), numOfResolvedExpressions = sg.getNumOfResolvedExpressions();
-//			String source = sg.getPartialSequence(), target = sg.getFullSequence();
-			String target = sg.getFullSequence();
-			//String[] sTokens = sg.getPartialSequenceTokens(), tTokens = sg.getFullSequenceTokens();
+			String target = sg.getFullSequence();;
 			String[] tTokens =  sg.getFullSequenceTokens();
 			stTargetSequences.print(target + "\n");
 			numOfSequences++;
-			
-//			if (testing) {
-//				if (sTokens.length != tTokens.length)
-//					throw new AssertionError("Source and target sequences do not have the same length!");
-//				for (int j = 0; j < sTokens.length; j++) {
-//					String s = sTokens[j], t = tTokens[j];
-////					if (!t.equals(s) && !t.endsWith(s))
-////					if (t.length() < s.length())
-//					if (!t.contains(".") && !s.contains(".") && !t.equals(s))
-//						throw new AssertionError("Corresponding source and target tokens do not match!");
-//				}
-//			}
+			stLocations.print(path + "\t" + packageName + "\t" + name + "\t" + method.getName().getIdentifier() + "\t" + getParameters(method) + "\t" + numofExpressions + "\t" + numOfResolvedExpressions + "\t" + "\n");
 		}
 		for (TypeDeclaration inner : td.getTypes())
 			numOfSequences += generateSequence(keepUnresolvables, lib, inner, path, packageName, name);
@@ -235,7 +220,7 @@ public class ProjectSequencesGenerator {
 		sb.append("(");
 		for (int i = 0; i < method.parameters().size(); i++) {
 			SingleVariableDeclaration d = (SingleVariableDeclaration) (method.parameters().get(i));
-			String type = StatParamVisitor.getUnresolvedType(d.getType());
+			String type = PA_Visitor.getUnresolvedType(d.getType());
 			sb.append("\t" + type);
 		}
 		sb.append("\t)");
@@ -317,183 +302,5 @@ public class ProjectSequencesGenerator {
 		}
 	}
 	
-	/**
-	 * 
-	 * @param inPath
-	 * @param doVerify
-	 * @return 	numbers[0]: 0-same number of sequences, 1-different numbers of sequences;
-	 * 			numbers[1]: number of sequences with different lengths;
-	 * 			numbers[2]: number of sequences with non-aligned tokens;
-	 * 			numbers[3]: number of non-aligned tokens 
-	 */
-	
-	public int[] generateAlignment(boolean doVerify) {
-		return generateAlignment(outPath, doVerify);
-	}
-	
-	/**
-	 * 
-	 * @param inPath
-	 * @param doVerify
-	 * @return 	numbers[0]: 0-same number of sequences, 1-different numbers of sequences;
-	 * 			numbers[1]: number of sequences with different lengths;
-	 * 			numbers[2]: number of sequences with non-aligned tokens;
-	 * 			numbers[3]: number of non-aligned tokens 
-	 */
-	public static int[] generateAlignment(String inPath, boolean doVerify) {
-		int[] numbers = new int[]{0, 0, 0, 0};
-		ArrayList<String> sourceSequences = FileUtil.getFileStringArray(inPath + "/source.txt"), 
-				targetSequences = FileUtil.getFileStringArray(inPath + "/target.txt");
-		if (doVerify)
-			if (sourceSequences.size() != targetSequences.size()) {
-				numbers[0]++;
-//				throw new AssertionError("Numbers of source and target sequences are not the same!!!");
-			}
-		File dir = new File(inPath + "-alignment");
-		if (!dir.exists())
-			dir.mkdirs();
-		PrintStream psS2T = null, psT2S = null;
-		try {
-			psS2T = new PrintStream(new FileOutputStream(dir.getAbsolutePath() + "/training.s-t.A3"));
-			psT2S = new PrintStream(new FileOutputStream(dir.getAbsolutePath() + "/training.t-s.A3"));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			if (psS2T != null)
-				psS2T.close();
-			if (psT2S != null)
-				psT2S.close();
-			e.printStackTrace();
-			return null;
-		}
-		for (int i = 0; i < sourceSequences.size(); i++) {
-			String source = sourceSequences.get(i), target = targetSequences.get(i);
-			String[] sTokens = source.trim().split(" "), tTokens = target.trim().split(" ");
-			if (doVerify) {
-				if (sTokens.length != tTokens.length) {
-					numbers[1]++;
-//					throw new AssertionError("Lengths of source and target sequences are not the same!!!");
-				}
-				boolean aligned = true;
-				for (int j = 0; j < sTokens.length; j++) {
-					String s = sTokens[j], t = tTokens[j];
-					if ((t.contains(".") && !t.substring(t.lastIndexOf('.')+1).equals(s.substring(s.lastIndexOf('.')+1))) || (!t.contains(".") && !t.equals(s))) {
-						numbers[3]++;
-						aligned = false;
-//						throw new AssertionError("Source and target are not aligned!!!");
-					}
-				}
-				if (!aligned)
-					numbers[2]++;
-			}
-			String headerS2T = generateHeader(sTokens, tTokens, i), headerT2S = generateHeader(tTokens, sTokens, i);
-			psS2T.println(headerS2T);
-			psT2S.println(headerT2S);
-			psS2T.println(target);
-			psT2S.println(source);
-			String alignmentS2T = generateAlignment(sTokens), alignmentT2S = generateAlignment(tTokens);
-			psS2T.println(alignmentS2T);
-			psT2S.println(alignmentT2S);
-		}
-		psS2T.flush();
-		psT2S.flush();
-		psS2T.close();
-		psT2S.close();
-		if (doVerify) {
-			if (sourceSequences.size()*3 != FileUtil.countNumberOfLines(dir.getAbsolutePath() + "/training.s-t.A3")
-					|| targetSequences.size()*3 != FileUtil.countNumberOfLines(dir.getAbsolutePath() + "/training.t-s.A3"))
-				numbers[0]++;
-		}
-		return numbers;
-	}
-	
-	/**
-	 * 
-	 * @param inPath
-	 * @param doVerify
-	 * @return 	numbers[0]: 0-same number of sequences, 1-different numbers of sequences;
-	 * 			numbers[1]: number of sequences with different lengths;
-	 * 			numbers[2]: number of sequences with non-aligned tokens;
-	 * 			numbers[3]: number of non-aligned tokens 
-	 */
-	public static int[] generateAlignmentForCrossValidation(String inPath, boolean doVerify) {
-		int[] numbers = new int[]{0, 0, 0, 0};
-		ArrayList<String> sourceSequences = FileUtil.getFileStringArray(inPath + "/train.s"), 
-				targetSequences = FileUtil.getFileStringArray(inPath + "/train.t");
-		if (doVerify)
-			if (sourceSequences.size() != targetSequences.size()) {
-				numbers[0]++;
-//				throw new AssertionError("Numbers of source and target sequences are not the same!!!");
-			}
-		File dir = new File(inPath + "-alignment");
-		if (!dir.exists())
-			dir.mkdirs();
-		PrintStream psS2T = null, psT2S = null;
-		try {
-			psS2T = new PrintStream(new FileOutputStream(dir.getAbsolutePath() + "/training.s-t.A3"));
-			psT2S = new PrintStream(new FileOutputStream(dir.getAbsolutePath() + "/training.t-s.A3"));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			if (psS2T != null)
-				psS2T.close();
-			if (psT2S != null)
-				psT2S.close();
-			e.printStackTrace();
-			return null;
-		}
-		for (int i = 0; i < sourceSequences.size(); i++) {
-			String source = sourceSequences.get(i), target = targetSequences.get(i);
-			String[] sTokens = source.trim().split(" "), tTokens = target.trim().split(" ");
-			if (doVerify) {
-				if (sTokens.length != tTokens.length) {
-					numbers[1]++;
-//					throw new AssertionError("Lengths of source and target sequences are not the same!!!");
-				}
-				boolean aligned = true;
-				for (int j = 0; j < sTokens.length; j++) {
-					String s = sTokens[j], t = tTokens[j];
-					if ((t.contains(".") && !t.substring(t.lastIndexOf('.')+1).equals(s.substring(s.lastIndexOf('.')+1))) || (!t.contains(".") && !t.equals(s))) {
-						numbers[3]++;
-						aligned = false;
-//						throw new AssertionError("Source and target are not aligned!!!");
-					}
-				}
-				if (!aligned)
-					numbers[2]++;
-			}
-			String headerS2T = generateHeader(sTokens, tTokens, i), headerT2S = generateHeader(tTokens, sTokens, i);
-			psS2T.println(headerS2T);
-			psT2S.println(headerT2S);
-			psS2T.println(target);
-			psT2S.println(source);
-			String alignmentS2T = generateAlignment(sTokens), alignmentT2S = generateAlignment(tTokens);
-			psS2T.println(alignmentS2T);
-			psT2S.println(alignmentT2S);
-		}
-		psS2T.flush();
-		psT2S.flush();
-		psS2T.close();
-		psT2S.close();
-		if (doVerify) {
-			if (sourceSequences.size()*3 != FileUtil.countNumberOfLines(dir.getAbsolutePath() + "/training.s-t.A3")
-					|| targetSequences.size()*3 != FileUtil.countNumberOfLines(dir.getAbsolutePath() + "/training.t-s.A3"))
-				numbers[0]++;
-		}
-		sourceSequences.clear();
-		targetSequences.clear();
-		return numbers;
-	}
-	
-	private static String generateAlignment(String[] tokens) {
-		StringBuilder sb = new StringBuilder();
-		sb.append("NULL ({  })");
-		for (int i = 0; i < tokens.length; i++) {
-			String t = tokens[i];
-			sb.append(" " + t + " ({ " + (i+1) + " })");
-		}
-		return sb.toString();
-	}
 
-	private static String generateHeader(String[] sTokens, String[] tTokens, int i) {
-		return "# sentence pair (" + i + ") source length " + sTokens.length + " target length " + tTokens.length + " alignment score : 0";
-	}
 }

@@ -13,16 +13,17 @@ public class CorpusGenerator {
 	private String repoPath;
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 		long start = System.currentTimeMillis();
-		String[] libs = new String[] { "org.apache.commons.", "android.",
-				"com.google.gwt.", "org.hibernate.", "org.joda.time.",
-				"com.thoughtworks.xstream." };
-		CorpusGenerator cg = new CorpusGenerator(
-				"C:\\Users\\pdhung\\Documents\\GitHub\\candlepin\\");
-		cg.generateSequences("C:\\Users\\pdhung\\Documents\\GitHub\\candlepin\\", "C:\\Users\\pdhung\\Desktop\\hungData\\research\\ImportantProjects\\SpecMiningProject\\ParameterRecommendation\\output_sequences\\");
+		String[] libs = new String[] { "" };
+//		String inpath = "F:/Study/Research/RNN/TypeResolutionParser-master/TypeResolutionParser-master/src/testInput";
+//		String inpath = "F:\\Study\\joda-time-master\\src";
+//		String inpath = "F:\\Study\\Research\\GraphModelForArgumentRecommendation\\eclipse.jdt.core-master\\eclipse.jdt.core-master";
+		String inpath = "F:\\Study\\Research\\RNN\\Dataset\\test";
+		String outpath = "F:\\Study\\Research\\RNN\\sequences\\testDataSet";
+		CorpusGenerator cg = new CorpusGenerator(inpath);
+		cg.generateSequences(inpath, outpath);
 		long end = System.currentTimeMillis();
-		System.out.println("Finish parsing corpus in " + (end - start) / 1000);
+		System.out.println("Finish parsing corpus in " + (end - start));
 	}
 
 	public CorpusGenerator(String repoPath) {
@@ -37,7 +38,7 @@ public class CorpusGenerator {
 				File outDir=new File(outPath);
 				File inDir=new File(repoListsPath);
 				ProjectSequencesGenerator psg = new ProjectSequencesGenerator(
-						inDir.getAbsolutePath()+"\\", false);
+						inDir.getAbsolutePath()+"\\", true);
 				if (!outDir.exists())
 					outDir.mkdirs();
 				try {
@@ -52,77 +53,4 @@ public class CorpusGenerator {
 		}).start();
 
 	}
-
-	/**
-	 * 
-	 * @param inPath
-	 * @param doVerify
-	 * @return numbers[0]: number of project with different numbers of
-	 *         sequences; numbers[1]: number of sequences with different
-	 *         lengths; numbers[2]: number of sequences with non-aligned tokens;
-	 *         numbers[3]: number of non-aligned tokens
-	 */
-	public static int[] concatSequences(String inPath, String outPath,
-			boolean keepNonAlignment) {
-		int[] numbers = new int[] { 0, 0, 0, 0 };
-		PrintStream sources = null, targets = null;
-		new File(outPath).mkdirs();
-		try {
-			sources = new PrintStream(new FileOutputStream(outPath
-					+ "/source.txt"));
-			targets = new PrintStream(new FileOutputStream(outPath
-					+ "/target.txt"));
-		} catch (IOException e) {
-			return null;
-		}
-		File dir = new File(inPath);
-		for (File sublib : dir.listFiles()) {
-			for (File subp : sublib.listFiles()) {
-				ArrayList<String> sourceSequences = FileUtil
-						.getFileStringArray(subp.getAbsolutePath()
-								+ "/source.txt"), targetSequences = FileUtil
-						.getFileStringArray(subp.getAbsolutePath()
-								+ "/target.txt");
-				if (sourceSequences.size() != targetSequences.size()) {
-					numbers[0]++;
-					continue;
-				}
-				for (int i = 0; i < sourceSequences.size(); i++) {
-					String source = sourceSequences.get(i), target = targetSequences
-							.get(i);
-					String[] sTokens = source.trim().split(" "), tTokens = target
-							.trim().split(" ");
-					if (sTokens.length != tTokens.length) {
-						numbers[1]++;
-						if (!keepNonAlignment)
-							continue;
-					}
-					if (!keepNonAlignment) {
-						boolean aligned = true;
-						for (int j = 0; j < sTokens.length; j++) {
-							String s = sTokens[j], t = tTokens[j];
-							if ((t.contains(".") && !t.endsWith(s))
-									|| (!t.contains(".") && !t.equals(s))) {
-								aligned = false;
-								numbers[3]++;
-							}
-						}
-						if (!aligned) {
-							numbers[2]++;
-							if (!keepNonAlignment)
-								continue;
-						}
-					}
-					sources.println(source);
-					targets.println(target);
-				}
-			}
-		}
-		sources.flush();
-		targets.flush();
-		sources.close();
-		targets.close();
-		return numbers;
-	}
-
 }
