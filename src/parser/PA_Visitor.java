@@ -1,8 +1,10 @@
 package parser;
+import java.awt.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.ArrayCreation;
 import org.eclipse.jdt.core.dom.ArrayInitializer;
@@ -91,13 +93,19 @@ import org.eclipse.jdt.core.dom.WildcardType;
 
 //extends ASTVisitor
 
+/**
+ * @author Mike
+ * Original from StatTypeVisitor to ParameterVisitor
+ * Now adapts to fit Program AutoRepair
+ * Space between tokens always generated at the end of one token
+ */
 public class PA_Visitor extends ASTVisitor {
 
+	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-
 	}
-
+	private static final boolean TOKEN_SIMPLE_NAME = false;
 	private static final boolean USE_SIMPLE_METHOD_NAME = false;
 	private String className, superClassName;
 	private int numOfExpressions = 0, numOfResolvedExpressions = 0;
@@ -318,12 +326,19 @@ public class PA_Visitor extends ASTVisitor {
 	}
 
 	@Override
+	public boolean visit(AnonymousClassDeclaration node) {
+		return false;
+	}
+
+	@Override
 	public boolean visit(ArrayAccess node) {
-		Expression exp = node.getArray();
-		Expression e1 = node.getIndex();
+		Expression a = node.getArray(); //the array
+		Expression e1 = node.getIndex(); //the element
 		// In definition, ArrayAccess has only one dimension
-		exp.accept(this);
+		a.accept(this);
+		this.fullTokens.append("[ "); 
 		e1.accept(this);
+		this.fullTokens.append(" ] ");
 		return false;
 	}
 
@@ -333,19 +348,50 @@ public class PA_Visitor extends ASTVisitor {
 		// getResolvedType(node.getType());
 		// this.partialTokens.append(" new " + utype + " ");
 		// this.fullTokens.append(" new " + rtype + " ");
+		this.fullTokens.append("new ");
+		String type = node.getType().resolveBinding().getQualifiedName();
+		type = type.substring(0,type.length()-2) + " "; //Remove one square bracelet
+		this.fullTokens.append(type);
+		//initializer = {f}
 		if (node.getInitializer() != null)
+		{
+			this.fullTokens.append("[ ] ");
 			node.getInitializer().accept(this);
+		}
+		//No initializer --> goes through all the dimension
 		else
+		{
 			for (int i = 0; i < node.dimensions().size(); i++)
+			{
+				this.fullTokens.append("[ ");
 				((Expression) (node.dimensions().get(i))).accept(this);
+				this.fullTokens.append("] ");
+			}
+		}
 		return false;
 	}
 
 	@Override
 	public boolean visit(ArrayInitializer node) {
+		this.fullTokens.append("{} ");
+//		for( ASTNode e : ((NodeList)((ArrayInitializer)node).expressions()))
+//		{
+//			e.accept(this);
+//			System.out.println(e.resolveTypeBinding().getQualifiedName());
+//			this.fullTokens.append(", ");
+//		}
+		//return false;
 		return super.visit(node);
 	}
 
+
+	@Override
+	public boolean visit(ArrayType node) {
+		String type = node.getElementType().resolveBinding().getQualifiedName();
+		System.out.println(type);
+		return false;
+	}
+	
 	@Override
 	public boolean visit(AssertStatement node) {
 		// this.fullTokens.append(" assert ");
@@ -695,6 +741,9 @@ public class PA_Visitor extends ASTVisitor {
 
 	@Override
 	public boolean visit(SimpleName node) {
+		String type = node.resolveTypeBinding().getQualifiedName();
+		this.fullTokens.append(type + " " + node.getIdentifier() + " ");
+		
 		return false;
 	}
 
@@ -910,11 +959,6 @@ public class PA_Visitor extends ASTVisitor {
 	}
 
 	@Override
-	public boolean visit(ArrayType node) {
-		return false;
-	}
-
-	@Override
 	public boolean visit(IntersectionType node) {
 		return false;
 	}
@@ -954,17 +998,6 @@ public class PA_Visitor extends ASTVisitor {
 		return false;
 	}
 
-	private boolean isAPI() {
-		boolean result = false;
-		return result;
-	}
-
-	// need to override
-	private boolean isAPI(ITypeBinding tb) {
-		boolean check = false;
-		return check;
-	}
-
 	private String resolveType(ITypeBinding tb) {
 		String result = "";
 		if(tb==null){
@@ -974,10 +1007,6 @@ public class PA_Visitor extends ASTVisitor {
 			return getQualifiedName(tb.getComponentType().getTypeDeclaration())
 					+ getDimensions(tb.getDimensions());
 		return tb.getQualifiedName();
-	}
-
-	private String getMethodSignature(MethodInvocation node) {
-		return "";
 	}
 
 	// need to override
