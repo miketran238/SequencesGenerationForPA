@@ -19,6 +19,7 @@ public class CorpusGenerator {
 //		String inpath = "F:\\Study\\joda-time-master\\src";
 //		String inpath = "F:\\Study\\Research\\GraphModelForArgumentRecommendation\\eclipse.jdt.core-master\\eclipse.jdt.core-master";
 		String inpath = "F:\\Study\\Research\\RNN\\Dataset\\test";
+//		String inpath = "/data";
 		String outpath = "F:\\Study\\Research\\RNN\\sequences\\testDataSet";
 		CorpusGenerator cg = new CorpusGenerator(inpath);
 		cg.generateSequences(inpath, outpath);

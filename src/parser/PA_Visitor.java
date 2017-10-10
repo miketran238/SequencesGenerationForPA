@@ -394,7 +394,7 @@ public class PA_Visitor extends ASTVisitor {
 	
 	@Override
 	public boolean visit(AssertStatement node) {
-		// this.fullTokens.append(" assert ");
+		this.fullTokens.append("assert ");
 		// this.partialTokens.append(" assert ");
 		return super.visit(node);
 	}
@@ -402,26 +402,26 @@ public class PA_Visitor extends ASTVisitor {
 	@Override
 	public boolean visit(Assignment node) {
 		node.getLeftHandSide().accept(this);
-		// this.fullTokens.append(" = ");
-		// this.partialTokens.append(" = ");
+		this.fullTokens.append(" = ");
 		node.getRightHandSide().accept(this);
 		return false;
 	}
 
 	@Override
 	public boolean visit(Block node) {
+		node.statements();
 		return super.visit(node);
 	}
 
 	@Override
 	public boolean visit(BooleanLiteral node) {
-		// this.fullTokens.append(" boolean ");
-		// this.partialTokens.append(" boolean ");
+		this.fullTokens.append("bool_lit ");
 		return false;
 	}
 
 	@Override
 	public boolean visit(BreakStatement node) {
+		this.fullTokens.append("break " + node.getLabel().getIdentifier() + " ");
 		return false;
 	}
 
