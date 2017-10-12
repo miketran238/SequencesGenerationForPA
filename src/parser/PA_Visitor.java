@@ -409,8 +409,11 @@ public class PA_Visitor extends ASTVisitor {
 
 	@Override
 	public boolean visit(Block node) {
-		node.statements();
-		return super.visit(node);
+		for (Statement s: (ArrayList<Statement>) node.statements())
+		{
+			s.accept(this);
+		}
+		return false;
 	}
 
 	@Override
@@ -427,25 +430,26 @@ public class PA_Visitor extends ASTVisitor {
 
 	@Override
 	public boolean visit(CastExpression node) {
-//		String result = "(" + resolveType(node.getType().resolveBinding()) + ")"
-//				+ resolveType(node.getExpression().resolveTypeBinding());
-		node.getExpression().accept(this);
 		CastExpression obj = (CastExpression) node;
-		// (Type(TypeName))S(e)
 		String result = " (" + resolveType(obj.getType().resolveBinding()) + ") ";
 		this.fullTokens.append(result);
+		node.getExpression().accept(this);
 		return false;
 	}
 
 	@Override
+	//catch ( R(e) ) { R(b1) }
 	public boolean visit(CatchClause node) {
-		return super.visit(node);
+		this.fullTokens.append("catch ( ");
+		node.getException().accept(this);
+		this.fullTokens.append(") ");
+		node.getBody().accept(this);
+		return false;
 	}
 
 	@Override
 	public boolean visit(CharacterLiteral node) {
-		// this.fullTokens.append(" char ");
-		// this.partialTokens.append(" char ");
+		this.fullTokens.append("char_lit ");
 		return false;
 	}
 
