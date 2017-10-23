@@ -9,16 +9,24 @@ public class TestData
 		boolean a = false;
 		assert !a;
 		nums = numsIn;
+		testCastExp();
 	}
 	
 	//test array access, array creation and array intializer
-	public void TestArray()
+	public void testArray()
 	{
 		int[] a = new int[5];
 		int[] b = new int[]{1,2,3};
 		a[0] = 100;
 	}
 	
+	public void testCastExp()
+	{
+		int a = (int) 1.1; 
+		Object o = null;
+		TestData td = (TestData) o;
+		System.out.println(a);
+	}
 	public void quickSort(int l, int h)
 	{
 		int pivotIndex = l;
