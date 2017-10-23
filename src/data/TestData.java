@@ -11,6 +11,14 @@ public class TestData
 		nums = numsIn;
 	}
 	
+	//test array access, array creation and array intializer
+	public void TestArray()
+	{
+		int[] a = new int[5];
+		int[] b = new int[]{1,2,3};
+		a[0] = 100;
+	}
+	
 	public void quickSort(int l, int h)
 	{
 		int pivotIndex = l;
