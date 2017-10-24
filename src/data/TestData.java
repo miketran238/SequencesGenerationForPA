@@ -27,6 +27,18 @@ public class TestData
 		TestData td = (TestData) o;
 		System.out.println(a);
 	}
+	
+	//class intance creation and constructor invocation
+	public void testClassCreation()
+	{
+		TestData dt = new TestData(new int[]{1,2,3});
+	}
+	
+	public void testFieldAccess()
+	{
+		this.nums[0] = 1;
+	}
+	
 	public void quickSort(int l, int h)
 	{
 		int pivotIndex = l;

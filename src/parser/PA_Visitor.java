@@ -107,7 +107,7 @@ public class PA_Visitor extends ASTVisitor {
 		// TODO Auto-generated method stub
 	}
 	private static final boolean TOKEN_SIMPLE_NAME = true;
-	private static final boolean TOKEN_TYPE = true;
+	private static final boolean TOKEN_TYPE = false;
 	private static final boolean USE_SIMPLE_METHOD_NAME = false;
 	private String className, superClassName;
 	private int numOfExpressions = 0, numOfResolvedExpressions = 0;
@@ -242,7 +242,7 @@ public class PA_Visitor extends ASTVisitor {
 		return s;
 	}
 
-	static String getResolvedType(Type type) {
+	public static String getResolvedType(Type type) {
 		ITypeBinding tb = type.resolveBinding();
 		if (tb == null || tb.isRecovered())
 			return getUnresolvedType(type);
@@ -500,13 +500,17 @@ public class PA_Visitor extends ASTVisitor {
 		if ( node.getExpression() != null)
 			node.getExpression().accept(this);
 		this.fullTokens.append("new ");
-		ITypeBinding tb = node.getType().resolveBinding();
-		String type = tb.getName();
+//		ITypeBinding tb = node.getType().resolveBinding();
+//		String type = tb.getName();
+		String type = getReturnType(node);
 		this.fullTokens.append(type + " ( ");
 		for (int i = 0; i < node.arguments().size(); i++)
 		{
 			((ASTNode) node.arguments().get(i)).accept(this);
-			this.fullTokens.append(", ");
+			if ( i < node.arguments().size()-1 )
+			{
+				this.fullTokens.append(", ");
+			}
 		}
 		this.fullTokens.append(") ");
 		return false;
@@ -527,19 +531,7 @@ public class PA_Visitor extends ASTVisitor {
 
 	@Override
 	public boolean visit(ConstructorInvocation node) {
-		IMethodBinding b = node.resolveConstructorBinding();
-		ITypeBinding tb = null;
-		if (b != null && b.getDeclaringClass() != null)
-			tb = b.getDeclaringClass().getTypeDeclaration();
-		if (tb != null) {
-			if (tb.isLocal() || tb.getQualifiedName().isEmpty())
-				return false;
-		}
-		//String name = "." + className + " () ";
-		String name = "";
-		// this.partialTokens.append(" " + name + " ");
-		if (tb != null)
-			name = getName(tb);
+		String name = getReturnType(node);
 		this.fullTokens.append(name + " this  ( ");
 		for (int i = 0; i < node.arguments().size(); i++)
 		{
@@ -626,18 +618,23 @@ public class PA_Visitor extends ASTVisitor {
 	public boolean visit(FieldAccess node) {
 		//R(e) Type(e).f
 		ITypeBinding tb = node.resolveTypeBinding();
-		IVariableBinding vb = node.resolveFieldBinding();
+
 		Expression exp=node.getExpression();
 		if (node.getExpression() != null) {
 			node.getExpression().accept(this);
 		}
+//		IVariableBinding vb = node.resolveFieldBinding();
+//		String typeE = "";
+//		if(vb != null)
+//		{
+//			typeE = vb.getDeclaringClass().getName();
+//		}
+
+//		//Take only simplename instead of FQN
+//		typeE = typeE.substring(typeE.lastIndexOf('.')+1);
+//		
+//		typeE = getReturnType(node);
 		String typeE = "";
-		if(vb != null)
-		{
-			typeE = resolveType(vb.getDeclaringClass());
-		}
-		//Take only simplename instead of FQN
-		typeE = typeE.substring(typeE.lastIndexOf('.')+1);
 		String result = typeE
 				+ " . " +node.getName().getIdentifier();
 		this.fullTokens.append(result + " ");
@@ -646,7 +643,8 @@ public class PA_Visitor extends ASTVisitor {
 
 	@Override
 	public boolean visit(FieldDeclaration node) {
-		this.fullTokens.append(node.getType().resolveBinding().getName() + " ");
+//		this.fullTokens.append(node.getType().resolveBinding().getName() + " ");
+		this.fullTokens.append(getReturnType(node));
 		for( int i = 0; i < node.fragments().size(); i++ )
 		{
 			((ASTNode) node.fragments().get(i)).accept(this);
@@ -716,8 +714,9 @@ public class PA_Visitor extends ASTVisitor {
 	public boolean visit(InstanceofExpression node) {
 		node.getLeftOperand().accept(this);
 		this.fullTokens.append("instanceof ");
-		String rtype = getResolvedType(node.getRightOperand());
-		rtype = rtype.substring(rtype.lastIndexOf('.')+1);
+//		String rtype = getResolvedType(node.getRightOperand());
+//		rtype = rtype.substring(rtype.lastIndexOf('.')+1);
+		String rtype = getReturnType(node);
 		this.fullTokens.append(rtype + " ");
 		return false;
 	}
@@ -991,7 +990,9 @@ public class PA_Visitor extends ASTVisitor {
 
 	@Override
 	public boolean visit(ThisExpression node) {
-		this.fullTokens.append(className + " . this ");
+		String className = getReturnType(node);
+		this.fullTokens.append(className + "this ");
+//		this.fullTokens.append(" . this ");
 		return false;
 	}
 
@@ -1374,50 +1375,73 @@ public class PA_Visitor extends ASTVisitor {
 				ClassInstanceCreation obj = (ClassInstanceCreation) node;
 				tb = obj.resolveTypeBinding();
 			} else if (node instanceof ConstructorInvocation) {
-				result = "this()";
+				IMethodBinding b = ((ConstructorInvocation) node).resolveConstructorBinding();
+				if (b != null && b.getDeclaringClass() != null)
+					tb = b.getDeclaringClass().getTypeDeclaration();
+				if (tb != null) {
+					if (tb.isLocal() || tb.getQualifiedName().isEmpty())
+						return "";
+				}
+				if (tb != null)
+					result = getName(tb);
 				return result;
+				
 			} else if (node instanceof SuperConstructorInvocation) {
 				result = "super()";
 				return result;
 			} else if (node instanceof QualifiedName) {
 				QualifiedName obj = (QualifiedName) node;
 				tb = obj.resolveTypeBinding();
-				
 			} else if (node instanceof FieldAccess) {
-				// ReturnType(E)|||S(e).f
 				FieldAccess obj = (FieldAccess) node;
 				tb = obj.resolveTypeBinding();
-				
-	
-			} else if (node instanceof ArrayAccess) {
+				IVariableBinding vb = obj.resolveFieldBinding();
+				System.out.println("FA");
+				if(vb != null)
+				{
+					result = vb.getDeclaringClass().getName();
+				}
+				return result;
+			} else if (node instanceof FieldDeclaration ) {
+				tb = ((FieldDeclaration) node).getType().resolveBinding();
+			}
+			else if (node instanceof InstanceofExpression) {
+				String rtype = getResolvedType(((InstanceofExpression) node).getRightOperand());
+				rtype = rtype.substring(rtype.lastIndexOf('.')+1);
+				return rtype;
+			}
+			else if (node instanceof ArrayAccess) {
 				// S(a)[n]
 				ArrayAccess obj = (ArrayAccess) node;
 				tb=obj.resolveTypeBinding();
 			} else if (node instanceof CastExpression) {
 				CastExpression obj = (CastExpression) node;
-				
-				return obj.getType().resolveBinding().getName();
+				tb = obj.getType().resolveBinding();
 			} else if (node instanceof StringLiteral) {
-				result = "String#lit";
+				result = "string_lit";
 				return result;
 			} else if (node instanceof NumberLiteral) {
-				result = "Number#lit";
+				result = "number_lit";
 				return result;
 			} else if (node instanceof CharacterLiteral) {
-				result = "Character#lit";
+				result = "char_lit";
 				return result;
 			} else if (node instanceof TypeLiteral) {
 				TypeLiteral obj = (TypeLiteral) node;
 				tb=obj.resolveTypeBinding();
 			} else if (node instanceof BooleanLiteral) {
-				result = "Boolean#lit";
+				result = "bool_lit";
 				return result;
 			} else if (node instanceof NullLiteral) {
-				result = "Null#lit";
+				result = "null_lit";
 				return result;
+			} else if (node instanceof ThisExpression)
+			{
+				return className + " "; 
 			}
+			
 			if(tb!=null){
-				result=resolveType(tb);			
+				result=tb.getName();			
 			}
 			return result;
 		}

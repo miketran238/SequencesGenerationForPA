@@ -2,4 +2,6 @@ F:\Study\Research\Program Auto-Repair\PA_Sequence_Generation\..\PA_Sequence_Gene
 F:\Study\Research\Program Auto-Repair\PA_Sequence_Generation\..\PA_Sequence_Generation\src\data\TestData.java	TestData	TestData	(	int[]	)
 F:\Study\Research\Program Auto-Repair\PA_Sequence_Generation\..\PA_Sequence_Generation\src\data\TestData.java	TestData	testArray	(	)
 F:\Study\Research\Program Auto-Repair\PA_Sequence_Generation\..\PA_Sequence_Generation\src\data\TestData.java	TestData	testCastExp	(	)
+F:\Study\Research\Program Auto-Repair\PA_Sequence_Generation\..\PA_Sequence_Generation\src\data\TestData.java	TestData	testClassCreation	(	)
+F:\Study\Research\Program Auto-Repair\PA_Sequence_Generation\..\PA_Sequence_Generation\src\data\TestData.java	TestData	testFieldAccess	(	)
 F:\Study\Research\Program Auto-Repair\PA_Sequence_Generation\..\PA_Sequence_Generation\src\data\TestData.java	TestData	quickSort	(	int	int	)
