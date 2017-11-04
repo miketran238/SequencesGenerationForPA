@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -63,7 +64,7 @@ public class ProjectSequencesGenerator {
 		int numOfSequences = 0;
 		for (String rootPath : rootPaths) {
 			String[] sourcePaths = getSourcePaths(rootPath, new String[]{".java"});
-			
+			Arrays.sort(sourcePaths);
 			@SuppressWarnings("rawtypes")
 			Map options = JavaCore.getOptions();
 			options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_1_8);

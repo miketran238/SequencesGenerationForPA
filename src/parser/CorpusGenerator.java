@@ -19,8 +19,9 @@ public class CorpusGenerator {
 //		String inpath = "F:\\Study\\joda-time-master\\src";
 //		String inpath = "F:\\Study\\Research\\GraphModelForArgumentRecommendation\\eclipse.jdt.core-master\\eclipse.jdt.core-master";
 //		String inpath = "C:\\Users\\Mike\\Desktop\\test";
-		String inpath = "..\\PA_Sequence_Generation\\src\\data";
-		String outpath = "..\\PA_Sequence_Generation\\src\\data\\result";
+//		String inpath = "..\\PA_Sequence_Generation\\src\\data";
+		String inpath = "F:\\Study\\Research\\Program Auto-Repair\\data\\iterator\\_good";
+		String outpath = "..\\PA_Sequence_Generation\\src\\data\\result\\good";
 		CorpusGenerator cg = new CorpusGenerator(inpath);
 		cg.generateSequences(inpath, outpath);
 		long end = System.currentTimeMillis();
