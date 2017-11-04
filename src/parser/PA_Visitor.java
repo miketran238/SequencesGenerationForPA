@@ -811,9 +811,8 @@ public class PA_Visitor extends ASTVisitor {
 	@Override
 	public boolean visit(QualifiedName node) {
 		String result = "";
-		result = node.getQualifier() == null? "" : node.getQualifier().toString();
-		this.fullTokens.append(result + "."
-				+ 		node.getName().getIdentifier());
+		result = node.getQualifier().toString();
+		this.fullTokens.append(result + " . " + node.getName().getIdentifier() + " ");
 		return false;
 	}
 
@@ -1106,10 +1105,13 @@ public class PA_Visitor extends ASTVisitor {
 
 	@Override
 	public boolean visit(VariableDeclarationFragment node) {
-		this.fullTokens.append(node.getName() + " = ");
+		this.fullTokens.append(node.getName());
 		if (node.getInitializer() != null) {
+			this.fullTokens.append(" = ");
 			node.getInitializer().accept(this);
 		}
+		else
+			this.fullTokens.append(" ");
 		return false;
 	}
 
